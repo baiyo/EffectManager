@@ -31,20 +31,6 @@ function EffectManager:AddEffect(Ins : Instance, Effect: string, value: Types.Ac
 		}
 	
 		self.Effects[obj][Effect] =  EffectProps
-		
-		-- if obj:IsA("Player") then
-		-- 	StatesRemote:FireClient(obj, {
-		-- 		obj = obj,
-		-- 		state = State,
-		-- 		props = StateProps
-		-- 	})
-		-- else
-		-- 	StatesRemote:FireAllClients({
-		-- 		obj = obj,
-		-- 		state = State,
-		-- 		props = StateProps
-		-- 	})
-		-- end
 
 	end
 
@@ -55,8 +41,14 @@ function EffectManager:AddEffect(Ins : Instance, Effect: string, value: Types.Ac
 	else
 		apply(Ins)
 	end
+end
 
+function EffectManager:RemoveEffect(Instance: Instance, Effect: string)
+    self = self :: Class
 
+    if self.Effects[Instance] and self.Effects[Instance][Effect] then
+        self.Effects[Instance][Effect] = nil
+    end
 end
 
 function EffectManager.new()
@@ -88,6 +80,12 @@ function EffectManager.new()
 
                         Main[EffectName] = nil
                         continue
+                    end
+
+                elseif typeof(Effect) == 'boolean' or typeof(Effect) == 'string'  then
+                    if EffectsFolder:FindFirstChild(EffectName) then
+                        local EffectClass = require(EffectsFolder[EffectName])
+                        EffectClass.Init(Instance, table.unpack(EffectInfo.extraArguments))
                     end
                 end
             end
