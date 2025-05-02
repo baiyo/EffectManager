@@ -2,6 +2,8 @@ local RunService = game:GetService("RunService")
 local Types = require(script.Parent.Types)
 local EffectsFolder = script.Parent.Effects
 
+-- Baiyo EffectManager
+
 local EffectManager = {}
 
 EffectManager.__index = EffectManager
@@ -85,7 +87,7 @@ function EffectManager.new()
 					if EffectsFolder:FindFirstChild(EffectName) then
 						local EffectClass = require(EffectsFolder[EffectName])
 						if EffectClass and typeof(EffectClass.Init) == "function" then
-							EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+							task.defer(EffectClass.Init, DT, Instance, table.unpack(EffectInfo.extraArguments))
 						end
 					end
 					if Effect.duration + Effect.start < nowTime then
@@ -96,7 +98,7 @@ function EffectManager.new()
 					if EffectsFolder:FindFirstChild(EffectName) then
 						local EffectClass = require(EffectsFolder[EffectName])
 						if EffectClass and typeof(EffectClass.Init) == "function" then
-							EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+							task.defer(EffectClass.Init, DT, Instance, table.unpack(EffectInfo.extraArguments))
 						end
 					end
 				end
