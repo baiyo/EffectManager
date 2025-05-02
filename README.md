@@ -22,7 +22,7 @@ local EffectRunner = EffectManager.new()
 Players.PlayerAdded:Connect(function(Player)
  Player.CharacterAdded:Connect(function(char)
         -- Shock is active for 5 seconds
-        EffectManager:AddEffect(Player, "Shock", 5)
+        EffectRunner:AddEffect(Player, "Shock", 5)
     end)
 end)
 
