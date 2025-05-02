@@ -1,37 +1,35 @@
 local RunService = game:GetService("RunService")
-local Types = require(script.Parent.types)
+local Types = require(script.Parent.Types)
 local EffectsFolder = script.Parent.Effects
 
 local EffectManager = {}
 
 EffectManager.__index = EffectManager
 
-function EffectManager:AddEffect(Ins : Instance, Effect: string, value: Types.Acceptable, ...)
-    self = self :: Class
+function EffectManager:AddEffect(Ins: Instance, Effect: string, value: Types.Acceptable, ...)
+	self = self :: Class
 
-    if typeof(value) == 'number' then
+	if typeof(value) == "number" then
 		assert(value > 0, "value must be greater than 0")
-	elseif typeof(value) ~= 'string' then
+	elseif typeof(value) ~= "string" then
 		error("value must be a number or string")
-		return 
+		return
 	end
 
-	local args = {...}
+	local args = { ... }
 
-    local function apply(obj:Instance)
+	local function apply(obj: Instance)
 		self.Effects[obj] = self.Effects[obj] or {}
-	
+
 		local EffectProps = {
-			value = if typeof(value) == 'number' then 
-				{start = workspace:GetServerTimeNow(), duration =  value} 
-			else
-				 value,
-				 
+			value = if typeof(value) == "number"
+				then { start = workspace:GetServerTimeNow(), duration = value }
+				else value,
+
 			extraArguments = args,
 		}
-	
-		self.Effects[obj][Effect] =  EffectProps
 
+		self.Effects[obj][Effect] = EffectProps
 	end
 
 	if typeof(Ins) == "table" then
@@ -44,54 +42,50 @@ function EffectManager:AddEffect(Ins : Instance, Effect: string, value: Types.Ac
 end
 
 function EffectManager:RemoveEffect(Instance: Instance, Effect: string)
-    self = self :: Class
+	self = self :: Class
 
-    if self.Effects[Instance] and self.Effects[Instance][Effect] then
-        self.Effects[Instance][Effect] = nil
-    end
+	if self.Effects[Instance] and self.Effects[Instance][Effect] then
+		self.Effects[Instance][Effect] = nil
+	end
 end
 
 function EffectManager.new()
 	local self = setmetatable({}, EffectManager)
 
-    self.Effects = {
-        [Instance]: {
-            [string]: {
-                value: Types.Acceptable | {start: number, duration: number},
-                extraArguments: {[any]: any}
-            }
-        }
-    }
-    
+	self.Effects = {} :: {
+		[Instance]: {
+			[string]: {
+				value: Types.Acceptable | { start: number, duration: number },
+				extraArguments: { [any]: any },
+			},
+		},
+	}
 
-    RunService.Heartbeat:Connect(function(DT: number)
-        local nowTime = workspace:GetServerTimeNow()
-        
-        for Instance,Main in pairs(self.Effects) do
-            for EffectName,EffectInfo in pairs(Main) do
-                local Effect = EffectInfo.value
+	RunService.Heartbeat:Connect(function(DT: number)
+		local nowTime = workspace:GetServerTimeNow()
 
-                if typeof(Effect) == 'table' then
-                    if Effect.duration + Effect.start < nowTime then
-                        if EffectsFolder:FindFirstChild(EffectName) then
-                            local EffectClass = require(EffectsFolder[EffectName])
-                            EffectClass.Init(Instance, table.unpack(EffectInfo.extraArguments))
-                        end
+		for Instance, Main in pairs(self.Effects) do
+			for EffectName, EffectInfo in pairs(Main) do
+				local Effect = EffectInfo.value
 
-                        Main[EffectName] = nil
-                        continue
-                    end
-
-                elseif typeof(Effect) == 'boolean' or typeof(Effect) == 'string'  then
-                    if EffectsFolder:FindFirstChild(EffectName) then
-                        local EffectClass = require(EffectsFolder[EffectName])
-                        EffectClass.Init(Instance, table.unpack(EffectInfo.extraArguments))
-                    end
-                end
-            end
-        end
-
-    end)
+				if typeof(Effect) == "table" then
+					if EffectsFolder:FindFirstChild(EffectName) then
+						local EffectClass = require(EffectsFolder[EffectName])
+						EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+					end
+					if Effect.duration + Effect.start < nowTime then
+						Main[EffectName] = nil
+						continue
+					end
+				elseif typeof(Effect) == "boolean" or typeof(Effect) == "string" then
+					if EffectsFolder:FindFirstChild(EffectName) then
+						local EffectClass = require(EffectsFolder[EffectName])
+						EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+					end
+				end
+			end
+		end
+	end)
 
 	return self
 end
