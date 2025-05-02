@@ -49,6 +49,19 @@ function EffectManager:RemoveEffect(Instance: Instance, Effect: string)
 	end
 end
 
+function EffectManager:HasEffect(Instance: Instance, Effect: string)
+	self = self :: Class
+
+	assert(typeof(Instance) == "Instance", "Object must be an Instance")
+	assert(typeof(Effect) == "string", "Effect must be a string")
+
+	if self.Effects[Instance] == nil or not self.Effects[Instance][Effect] then
+		return false
+	end
+
+	return true
+end
+
 function EffectManager.new()
 	local self = setmetatable({}, EffectManager)
 
@@ -71,7 +84,9 @@ function EffectManager.new()
 				if typeof(Effect) == "table" then
 					if EffectsFolder:FindFirstChild(EffectName) then
 						local EffectClass = require(EffectsFolder[EffectName])
-						EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+						if EffectClass and typeof(EffectClass.Init) == "function" then
+							EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+						end
 					end
 					if Effect.duration + Effect.start < nowTime then
 						Main[EffectName] = nil
@@ -80,9 +95,14 @@ function EffectManager.new()
 				elseif typeof(Effect) == "boolean" or typeof(Effect) == "string" then
 					if EffectsFolder:FindFirstChild(EffectName) then
 						local EffectClass = require(EffectsFolder[EffectName])
-						EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+						if EffectClass and typeof(EffectClass.Init) == "function" then
+							EffectClass.Init(DT, Instance, table.unpack(EffectInfo.extraArguments))
+						end
 					end
 				end
+			end
+			if next(Main) == nil then
+				self.Effects[Instance] = nil
 			end
 		end
 	end)
