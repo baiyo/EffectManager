@@ -1,6 +1,8 @@
 # EffectManager
 
 ## Documentation
+To add new effects create a new module under the effects folder
+
 
 ### Fetching
 ```lua
