@@ -2,116 +2,99 @@ local RunService = game:GetService("RunService")
 local Types = require(script.Parent.Types)
 local EffectsFolder = script.Parent.Effects
 
--- Baiyo EffectManager
-
-local EffectManager = {}
-
-EffectManager.__index = EffectManager
-
-function EffectManager:AddEffect(Ins: Instance, Effect: string, value: Types.Acceptable, ...)
-	self = self :: Class
-
-	if typeof(value) == "number" then
-		assert(value > 0, "value must be greater than 0")
-	elseif typeof(value) ~= "string" then
-		error("value must be a number or string")
-		return
-	end
-
-	local args = { ... }
-
-	local function apply(obj: Instance)
-		self.Effects[obj] = self.Effects[obj] or {}
-
-		local EffectProps = {
-			value = if typeof(value) == "number"
-				then { start = workspace:GetServerTimeNow(), duration = value }
-				else value,
-
-			extraArguments = args,
-		}
-
-		self.Effects[obj][Effect] = EffectProps
-	end
-
-	if typeof(Ins) == "table" then
-		for _, obj in pairs(Ins) do
-			apply(obj)
-		end
-	else
-		apply(Ins)
-	end
-end
-
-function EffectManager:RemoveEffect(Instance: Instance, Effect: string)
-	self = self :: Class
-
-	if self.Effects[Instance] and self.Effects[Instance][Effect] then
-		self.Effects[Instance][Effect] = nil
-	end
-end
-
-function EffectManager:HasEffect(Instance: Instance, Effect: string)
-	self = self :: Class
-
-	assert(typeof(Instance) == "Instance", "Object must be an Instance")
-	assert(typeof(Effect) == "string", "Effect must be a string")
-
-	if self.Effects[Instance] == nil or not self.Effects[Instance][Effect] then
-		return false
-	end
-
-	return true
-end
-
-function EffectManager.new()
-	local self = setmetatable({}, EffectManager)
-
-	self.Effects = {} :: {
+local EffectManager = {
+	Effects = {} :: {
 		[Instance]: {
 			[string]: {
 				value: Types.Acceptable | { start: number, duration: number },
 				extraArguments: { [any]: any },
 			},
 		},
-	}
+	},
+	_runningConnection = nil :: RBXScriptConnection?,
+}
 
-	RunService.Heartbeat:Connect(function(DT: number)
+local function startEffectLoop()
+	if EffectManager._runningConnection then return end
+	
+	EffectManager._runningConnection = RunService.Heartbeat:Connect(function(DT)
 		local nowTime = workspace:GetServerTimeNow()
+		local stillHasEffects = false
 
-		for Instance, Main in pairs(self.Effects) do
-			for EffectName, EffectInfo in pairs(Main) do
-				local Effect = EffectInfo.value
+		for instance, effects in pairs(EffectManager.Effects) do
+			for effectName, effectInfo in pairs(effects) do
+				local effect = effectInfo.value
+				stillHasEffects = true
 
-				if typeof(Effect) == "table" then
-					if EffectsFolder:FindFirstChild(EffectName) then
-						local EffectClass = require(EffectsFolder[EffectName])
-						if EffectClass and typeof(EffectClass.Init) == "function" then
-							task.defer(EffectClass.Init, DT, Instance, table.unpack(EffectInfo.extraArguments))
-						end
-					end
-					if Effect.duration + Effect.start < nowTime then
-						Main[EffectName] = nil
-						continue
-					end
-				elseif typeof(Effect) == "boolean" or typeof(Effect) == "string" then
-					if EffectsFolder:FindFirstChild(EffectName) then
-						local EffectClass = require(EffectsFolder[EffectName])
-						if EffectClass and typeof(EffectClass.Init) == "function" then
-							task.defer(EffectClass.Init, DT, Instance, table.unpack(EffectInfo.extraArguments))
-						end
+				local module = EffectsFolder:FindFirstChild(effectName)
+				if module then
+					local effectClass = require(module)
+					if typeof(effectClass.Init) == "function" then
+						task.defer(effectClass.Init, DT, instance, table.unpack(effectInfo.extraArguments))
 					end
 				end
+
+				if typeof(effect) == "table" and effect.start + effect.duration < nowTime then
+					effects[effectName] = nil
+				end
 			end
-			if next(Main) == nil then
-				self.Effects[Instance] = nil
+
+			if next(effects) == nil then
+				EffectManager.Effects[instance] = nil
 			end
 		end
-	end)
 
-	return self
+		if not stillHasEffects then
+			EffectManager._runningConnection:Disconnect()
+			EffectManager._runningConnection = nil
+		end
+	end)
 end
 
-export type Class = typeof(EffectManager.new())
+function EffectManager:AddEffect(ins: Instance | { Instance }, effect: string, value: Types.Acceptable, ...: any)
+	if typeof(value) == "number" then
+		assert(value > 0, "value must be greater than 0")
+	elseif typeof(value) ~= "string" then
+		error("value must be a number or string")
+	end
+
+	local args = { ... }
+
+	local function apply(obj: Instance)
+		self.Effects[obj] = self.Effects[obj] or {}
+		self.Effects[obj][effect] = {
+			value = typeof(value) == "number" and {
+				start = workspace:GetServerTimeNow(),
+				duration = value,
+			} or value,
+			extraArguments = args,
+		}
+	end
+
+	if typeof(ins) == "table" then
+		for _, obj in ipairs(ins) do
+			apply(obj)
+		end
+	else
+		apply(ins)
+	end
+
+	startEffectLoop()
+end
+
+function EffectManager:RemoveEffect(instance: Instance, effect: string)
+	if self.Effects[instance] then
+		self.Effects[instance][effect] = nil
+		if next(self.Effects[instance]) == nil then
+			self.Effects[instance] = nil
+		end
+	end
+end
+
+function EffectManager:HasEffect(instance: Instance, effect: string)
+	assert(typeof(instance) == "Instance", "Object must be an Instance")
+	assert(typeof(effect) == "string", "Effect must be a string")
+	return self.Effects[instance] and self.Effects[instance][effect] ~= nil
+end
 
 return EffectManager
